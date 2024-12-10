@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import os
 
 # Initialize pygame
 pygame.init()
@@ -21,9 +22,9 @@ clock = pygame.time.Clock()
 
 # Adjustable speeds
 PADDLE_SPEED = 10  # Paddle speed
-BALL_SPEED_X = 5  # Initial horizontal ball speed
+BALL_SPEED_X = 5   # Initial horizontal ball speed
 BALL_SPEED_Y = -5  # Initial vertical ball speed
-BALL_SPEED_INCREMENT = 0.5  # Amount to increase ball speed over time
+BALL_SPEED_INCREMENT = 0.2  # Amount to increase ball speed over time
 
 # Paddle properties
 PADDLE_WIDTH = WIDTH // 8
@@ -32,19 +33,34 @@ PADDLE_HEIGHT = 10
 # Ball properties
 BALL_SIZE = WIDTH // 40
 
+# File path for high score storage
+HIGH_SCORE_FILE = "high_score.txt"
 
 # Function to calculate font size based on screen height
-def get_font_size(screen_height, percentage=0.075):
+def get_font_size(screen_height, percentage=0.07):
     return int(screen_height * percentage)
 
-
 # Adjust font size based on screen height
-font_size = get_font_size(HEIGHT)  # Font size is 7.5% of screen height
+font_size = get_font_size(HEIGHT)  # Font size is 7% of screen height
 font = pygame.font.Font(None, font_size)
 
-# High score
-high_score = 0
+# Load high score from file (if it exists)
+def load_high_score():
+    if os.path.exists(HIGH_SCORE_FILE):
+        with open(HIGH_SCORE_FILE, "r") as file:
+            try:
+                return int(file.read())
+            except ValueError:
+                return 0
+    return 0
 
+# Save high score to file
+def save_high_score(score):
+    with open(HIGH_SCORE_FILE, "w") as file:
+        file.write(str(score))
+
+# Initialize high score
+high_score = load_high_score()
 
 def reset_game():
     """Resets the game to its initial state."""
@@ -59,51 +75,40 @@ def reset_game():
     current_speed = abs(ball_dx)  # Reset the current ball speed
     running = True
 
-
 def draw_objects():
     """Draws the paddle, ball, score, and high score."""
     screen.fill(BLACK)
     pygame.draw.rect(screen, WHITE, (paddle_x, paddle_y, PADDLE_WIDTH, PADDLE_HEIGHT))
     pygame.draw.ellipse(screen, RED, (ball_x, ball_y, BALL_SIZE, BALL_SIZE))
-
+    
     # Draw current score
     score_text = font.render(f"Score: {score}", True, WHITE)
     score_text_rect = score_text.get_rect(center=(WIDTH // 2, font_size))
     screen.blit(score_text, score_text_rect)
-
+    
     # Draw high score
     high_score_text = font.render(f"High Score: {high_score}", True, WHITE)
     high_score_text_rect = high_score_text.get_rect(center=(WIDTH // 2, font_size * 2))
     screen.blit(high_score_text, high_score_text_rect)
-
+    
     pygame.display.flip()
-
 
 def game_over_screen():
     """Displays the 'Game Over' screen and waits for user input to restart or quit."""
     global high_score
     if score > high_score:
         high_score = score  # Update high score
-
+        save_high_score(high_score)  # Save the new high score
+    
     screen.fill(BLACK)
     game_over_text = font.render("Game Over", True, WHITE)
     final_score_text = font.render(f"Final Score: {score}", True, WHITE)
     high_score_text = font.render(f"High Score: {high_score}", True, WHITE)
     restart_text = font.render("Press R to Restart or ESC to Quit", True, WHITE)
-    screen.blit(
-        game_over_text,
-        (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 100),
-    )
-    screen.blit(
-        final_score_text,
-        (WIDTH // 2 - final_score_text.get_width() // 2, HEIGHT // 2 - 50),
-    )
-    screen.blit(
-        high_score_text, (WIDTH // 2 - high_score_text.get_width() // 2, HEIGHT // 2)
-    )
-    screen.blit(
-        restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50)
-    )
+    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 100))
+    screen.blit(final_score_text, (WIDTH // 2 - final_score_text.get_width() // 2, HEIGHT // 2 - 50))
+    screen.blit(high_score_text, (WIDTH // 2 - high_score_text.get_width() // 2, HEIGHT // 2))
+    screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50))
     pygame.display.flip()
 
     while True:
@@ -118,7 +123,6 @@ def game_over_screen():
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
-
 
 # Initialize game state
 reset_game()
@@ -151,11 +155,8 @@ while True:
         ball_dy = -ball_dy
 
     # Ball collision with paddle
-    if (
-        paddle_y < ball_y + BALL_SIZE < paddle_y + PADDLE_HEIGHT
-        and paddle_x < ball_x + BALL_SIZE
-        and ball_x < paddle_x + PADDLE_WIDTH
-    ):
+    if (paddle_y < ball_y + BALL_SIZE < paddle_y + PADDLE_HEIGHT and
+            paddle_x < ball_x + BALL_SIZE and ball_x < paddle_x + PADDLE_WIDTH):
         ball_dy = -ball_dy
         score += 1
 
